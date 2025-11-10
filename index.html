@@ -1,113 +1,159 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>重力異常計算結果</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f4f4f9;
-        }
-        .container {
-            max-width: 800px;
-            margin: auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        h1, h2 {
-            color: #333;
-            border-bottom: 2px solid #ccc;
-            padding-bottom: 5px;
-        }
-        pre {
-            background-color: #eee;
-            padding: 15px;
-            border-radius: 5px;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-        .input-table, .output-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        .input-table th, .input-table td, .output-table th, .output-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        .input-table th {
-            background-color: #f2f2f2;
-        }
-        .output-table th {
-            background-color: #d9edf7;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>重力測站計算結果</title>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 20px;
+      background-color: #f7f9fc;
+      color: #333;
+    }
+    h1, h2 {
+      color: #2c3e50;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 16px;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #3498db;
+      color: white;
+    }
+    tr:hover {
+      background-color: #f1f8ff;
+    }
+    .result {
+      font-weight: bold;
+      color: #e74c3c;
+    }
+    .section {
+      margin-top: 30px;
+      padding: 15px;
+      border-left: 4px solid #3498db;
+      background-color: #f9fbfc;
+    }
+    .input-data {
+      background-color: #eef5fb;
+      padding: 10px;
+      border-radius: 8px;
+      font-family: monospace;
+    }
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      color: #7f8c8d;
+      font-size: 0.9em;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🌍 重力異常計算結果</h1>
 
-        <h2>Python 程式碼</h2>
-        <pre>
+<div class="container">
+  <h1>重力測站計算結果</h1>
+  <p>根據題目資料自動計算理論重力、校正值與重力異常（陸地與海洋情境）</p>
+
+  <div class="input-data">
+    <strong>輸入資料：</strong><br>
+    緯度：48.1195° N<br>
+    經度：12.1878° E<br>
+    海拔：487.9 m<br>
+    實測重力：980,717.39 mGal
+  </div>
+
+  <div id="output"></div>
+</div>
+
+<script type="text/pyodide">
 import numpy as np
-lon = 12.1878; lat = 48.1195; ele = 487.9; G0 = 980717.39
-Ge = 978031.85;
-fac = np.pi / 180.0  #度轉徑度
+from js import document
 
-# a-1: 理論重力 Gt
-Gt = Ge*(1+0.005278895*np.sin(lat*fac)**2+0.000023462*np.sin(lat*fac)**4)
+# 輸入參數
+lon = 12.1878
+lat = 48.1195
+ele = 487.9
+G0 = 980717.39
+Ge = 978031.85  # GRS80 赤道重力常數（近似）
+fac = np.pi / 180.0
 
-# a-2: 自由空氣改正量 FAC
-FAC = ele*(0.308)
+# === 部分 (a)：陸上測站 ===
 
-# a-3: 布格改正量 BC (假設密度為 2.67 g/cm^3 時的標準值: 0.1119 * ele, 程式中使用 0.112)
-BC = ele*(0.112)
+# a-1: 理論重力（使用簡化公式）
+sin_lat = np.sin(lat * fac)
+Gt = Ge * (1 + 0.005278895 * sin_lat**2 + 0.000023462 * sin_lat**4)
 
-# a-4: 自由空氣重力異常 Gfa
-Gfa = (G0 + FAC) - Gt
+# a-2: 自由空氣校正（近似 -0.3086 mGal/m）
+FAC = -0.3086 * ele
 
-# a-5: 布格重力異常 Gb
+# a-3: 布格校正（岩石密度 2.67 g/cm³ → 0.1119 mGal/m）
+BC = 0.1119 * ele
+
+# a-4: 自由空氣重力異常
+Gfa = G0 - (Gt + FAC)
+
+# a-5: 布格重力異常
 Gb = Gfa - BC
 
-# b: 簡單的自由空氣異常 gfa
-gfa = G0 - Gt
+# === 部分 (b)：海洋測站（海面，水深 487.9 m）===
 
-# b: 簡單的布格改正 bc (程式中使用的值: -0.0687 * ele)
-bc = ele*(-0.0687) 
+# 理論重力不變
+gfa_ocean = G0 - Gt  # 自由空氣異常（高度=0）
 
-# b: 簡單的布格重力異常 gb
-gb = gfa - bc
-        </pre>
+# 海洋布格校正：水密度 1.03 g/cm³ → 0.0432 mGal/m
+BC_water = 0.0432 * 487.9
 
-        <h2>輸入參數</h2>
-        <table class="input-table">
-            <tr><th>參數名稱</th><th>變數</th><th>值</th></tr>
-            <tr><td>經度</td><td>lon</td><td>12.1878</td></tr>
-            <tr><td>緯度</td><td>lat</td><td>48.1195</td></tr>
-            <tr><td>海拔高度 (m)</td><td>ele</td><td>487.9</td></tr>
-            <tr><td>觀測重力值 (mGal)</td><td>G0</td><td>980717.39</td></tr>
-            <tr><td>赤道標準重力值 (mGal)</td><td>Ge</td><td>978031.85</td></tr>
-        </table>
+# 布格異常（海洋）
+Gb_ocean = gfa_ocean - BC_water
 
-        <h2>計算結果 (來自程式輸出)</h2>
-        <pre id="output-log">
-theoretical gravity : 980598.6756209598
-FAC : 150.2132
-BC : 54.6448
-Gfa : 269.0475790401779
-Gb : 214.40277904017792
-gfa : 118.7143790401779
-bc : -33.52953
-gb : 152.2439090401779
-        </pre>
+# 輸出 HTML 表格
+html = """
+<h2 class="section">部分 (a)：陸上測站（海拔 487.9 m）</h2>
+<table>
+  <tr><th>項目</th><th>計算公式</th><th>結果 (mGal)</th></tr>
+  <tr><td>理論重力 (Gt)</td><td>Ge × (1 + 0.005278895 sin²φ + 0.000023462 sin⁴φ)</td><td class="result">{:.1f}</td></tr>
+  <tr><td>自由空氣校正 (FAC)</td><td>-0.3086 × h</td><td class="result">{:.1f}</td></tr>
+  <tr><td>布格校正 (BC, ρ=2.67)</td><td>0.1119 × h</td><td class="result">{:.1f}</td></tr>
+  <tr><td>自由空氣異常 (Δg_FA)</td><td>G₀ - (Gt + FAC)</td><td class="result">{:.1f}</td></tr>
+  <tr><td>布格異常 (Δg_B)</td><td>Δg_FA - BC</td><td class="result">{:.1f}</td></tr>
+</table>
 
-        <p><em>註：以上計算結果是基於原始 Python 程式碼的邏輯和提供的輸入參數計算得出的，結果的單位可能為 mGal (毫伽)。</em></p>
-    </div>
+<h2 class="section">部分 (b)：海洋測站（水深 487.9 m）</h2>
+<table>
+  <tr><th>項目</th><th>說明</th><th>結果 (mGal)</th></tr>
+  <tr><td>自由空氣異常 (Δg_FA)</td><td>G₀ - Gt （高度=0）</td><td class="result">{:.1f}</td></tr>
+  <tr><td>布格校正 (水層, ρ=1.03)</td><td>0.0432 × 487.9</td><td class="result">{:.1f}</td></tr>
+  <tr><td>布格異常 (Δg_B)</td><td>Δg_FA - BC_water</td><td class="result">{:.1f}</td></tr>
+</table>
+""".format(
+    Gt, FAC, BC, Gfa, Gb,
+    gfa_ocean, BC_water, Gb_ocean
+)
+
+document.getElementById("output").innerHTML = html
+</script>
+
+<footer>
+  Generated on November 10, 2025 | 使用 Pyodide 在瀏覽器執行 Python<br>
+  標準參考：GRS80 | 岩石密度 2.67 g/cm³ | 海水密度 1.03 g/cm³
+</footer>
+
 </body>
 </html>
