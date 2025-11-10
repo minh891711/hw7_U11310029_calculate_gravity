@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>重力測站數據處理與異常計算</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 20px; background-color: #f4f4f9; color: #333; }
+        .container { max-width: 900px; margin: auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        h1, h2, h3 { color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 5px; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #e9ecef; color: #333; }
+        .result { font-weight: bold; color: #d9534f; font-size: 1.1em; }
+        .note { background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 10px; margin: 15px 0; color: #856404; }
+        .formula { background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin: 10px 0; overflow-x: auto; }
+        .section-header { margin-top: 30px; padding: 8px 0; border-bottom: 1px dashed #ccc; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🌎 重力測站數據處理與異常計算</h1>
+
+        <div class="section-header">
+            <h2>給定數據</h2>
+            <ul>
+                <li><strong>緯度 (φ):</strong> 48.1195° N</li>
+                <li><strong>經度 (λ):</strong> 12.1878° E</li>
+                <li><strong>高程 (H):</strong> 487.9 m</li>
+                <li><strong>觀測重力 ($g_{\text{obs}}$):</strong> 980,717.39 mGal</li>
+            </ul>
+        </div>
+
+        <div class="section-header">
+            <h2>使用的常數和公式 (近似值)</h2>
+            <table>
+                <tr><th>參數</th><th>符號</th><th>值</th><th>單位</th></tr>
+                <tr><td>標準地殼密度</td><td>$\rho$</td><td>2.67</td><td>g/cm³</td></tr>
+                <tr><td>自由空氣梯度 ($F$)</td><td>$F$</td><td>0.3086</td><td>mGal/m</td></tr>
+                <tr><td>布格梯度 ($B$)</td><td>$B \approx 0.00004193 \cdot \rho$</td><td>$0.1119$</td><td>mGal/m ($\rho=2.67$ g/cm³)</td></tr>
+                <tr><td>國際重力公式 (GRS80/WGS84 簡化)</td><td colspan="3"><div class="formula">$\gamma_0 = 978032.7 \cdot (1 + 0.0053024 \cdot \sin^2(\phi) - 0.0000058 \cdot \sin^2(2\phi))$</div></td></tr>
+            </table>
+        </div>
+
+        <div class="section-header">
+            <h2>a) 計算 (地面測站)</h2>
+        </div>
+
+        <h3>i) 理論重力 ($\gamma_0$)</h3>
+        <div class="formula">
+            $\phi = 48.1195^\circ$<br>
+            $\gamma_0 \approx 978032.7 \cdot (1 + 0.0053024 \cdot \sin^2(48.1195^\circ) - 0.0000058 \cdot \sin^2(2 \cdot 48.1195^\circ))$<br>
+            $\gamma_0 \approx 978032.7 \cdot (1 + 0.0029406 - 0.0000057) \text{ mGal}$<br>
+            $\gamma_0 \approx <span class="result">980900.51 \text{ mGal}</span>$
+        </div>
+
+        <h3>ii) 自由空氣改正 ($\text{FAC}$)</h3>
+        <div class="formula">
+            $\text{FAC} = F \cdot H = 0.3086 \cdot 487.9 \text{ m}$<br>
+            $\text{FAC} \approx <span class="result">150.59 \text{ mGal}</span>$
+        </div>
+
+        <h3>iii) 布格改正 ($\text{BC}$)</h3>
+        <div class="formula">
+            $\text{BC} = B \cdot H = 0.1119 \cdot 487.9 \text{ m}$<br>
+            $\text{BC} \approx <span class="result">54.60 \text{ mGal}</span>$
+        </div>
+
+        <h3>iv) 自由空氣重力異常 ($\Delta g_{\text{FA}}$)</h3>
+        <div class="formula">
+            $\Delta g_{\text{FA}} = g_{\text{obs}} + \text{FAC} - \gamma_0$<br>
+            $\Delta g_{\text{FA}} \approx 980717.39 + 150.59 - 980900.51 \text{ mGal}$<br>
+            $\Delta g_{\text{FA}} \approx <span class="result">-32.53 \text{ mGal}</span>$
+        </div>
+
+        <h3>v) 布格重力異常 ($\Delta g_{\text{B}}$)</h3>
+        <div class="formula">
+            $\Delta g_{\text{B}} = \Delta g_{\text{FA}} - \text{BC}$<br>
+            $\Delta g_{\text{B}} \approx -32.53 - 54.60 \text{ mGal}$<br>
+            $\Delta g_{\text{B}} \approx <span class="result">-87.13 \text{ mGal}</span>$
+        </div>
+
+        <div class="section-header">
+            <h2>b) 重新計算 (海洋測站，水深 $D=487.9 \text{ m}$)</h2>
+            <p><strong>假設條件:</strong> 測站在海平面 (高程 $H=0$) 上觀測，但正下方為水深 $D=487.9 \text{ m}$。觀測重力和理論重力不變。</p>
+            <ul>
+                <li>水深 ($D$): 487.9 m</li>
+                <li>海水密度 ($\rho_{\text{w}}$): 1.03 g/cm³ (常用值)</li>
+                <li>理論重力 ($\gamma_0$): 980900.51 mGal (不變)</li>
+            </ul>
+        </div>
+
+        <h3>i) 自由空氣重力異常 ($\Delta g_{\text{FA}}$)</h3>
+        <div class="note">
+            在海平面上的測站，高程 $H=0$，因此 $\text{FAC} = 0$.
+        </div>
+        <div class="formula">
+            $\Delta g_{\text{FA}} = g_{\text{obs}} + \text{FAC} - \gamma_0$<br>
+            $\Delta g_{\text{FA}} = 980717.39 + 0 - 980900.51 \text{ mGal}$<br>
+            $\Delta g_{\text{FA}} \approx <span class="result">-183.12 \text{ mGal}</span>$
+        </div>
+
+        <h3>ii) 布格重力異常 ($\Delta g_{\text{B}}$)</h3>
+        <div class="note">
+            海洋上的布格異常 (Marine Bouguer Anomaly) 需考慮**水層虧損改正** ($\text{WC}$)，公式為：<br>
+            $\Delta g_{\text{B}} = \Delta g_{\text{FA}} + \text{WC}$<br>
+            水層改正 ($\text{WC}$) = $2\pi G \rho_{\text{w}} D$
+        </div>
+        <div class="formula">
+            <p>水層改正 ($\text{WC}$) 公式近似值為: $0.00004193 \cdot \rho_{\text{w}} \cdot D \text{ mGal}$</p>
+            $\text{WC} \approx 0.00004193 \cdot 1030 \cdot 487.9 \text{ mGal}$<br>
+            $\text{WC} \approx 0.04319 \cdot 487.9 \text{ mGal} \approx 21.08 \text{ mGal}$<br>
+            <br>
+            $\Delta g_{\text{B}} = \Delta g_{\text{FA}} + \text{WC}$<br>
+            $\Delta g_{\text{B}} \approx -183.12 + 21.08 \text{ mGal}$<br>
+            $\Delta g_{\text{B}} \approx <span class="result">-162.04 \text{ mGal}</span>$
+        </div>
+    </div>
+
+</body>
+</html>
